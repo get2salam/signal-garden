@@ -1,0 +1,69 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Signal Garden</title>
+    <meta name="description" content="Collect promising ideas, tag their signal strength, and decide what to nurture." />
+    <link rel="stylesheet" href="./styles/app.css" />
+  </head>
+  <body style="--primary:#34d399;--secondary:#93c5fd;--panel:#0d1718;--edge:#21433f;--glow:rgba(52, 211, 153, 0.22)">
+    <div class="shell">
+      <header class="topbar">
+        <div>
+          <p class="eyebrow">Local-first micro app</p>
+          <h1>Signal Garden</h1>
+          <p class="lede">Collect promising ideas, tag their signal strength, and decide what to nurture.</p>
+        </div>
+        <div class="actions">
+          <button class="btn" data-action="import">Import</button>
+          <button class="btn" data-action="export">Export</button>
+          <button class="btn btn-primary" data-action="new">New signal</button>
+          <input id="import-file" type="file" accept=".json,application/json" hidden />
+        </div>
+      </header>
+
+      <section class="hero card">
+        <div>
+          <p class="eyebrow">Signals board</p>
+          <h2 data-role="board-title"></h2>
+          <p data-role="board-subtitle"></p>
+        </div>
+        <p class="accent">Not every idea deserves a roadmap. Grow the ones with real signal.</p>
+      </section>
+
+      <section class="stats" data-role="stats"></section>
+
+      <section class="controls card">
+        <label>
+          <span>Search</span>
+          <input type="search" data-field="search" placeholder="Search signals..." />
+        </label>
+        <label>
+          <span>Signal type</span>
+          <select data-field="category"></select>
+        </label>
+        <label>
+          <span>Status</span>
+          <select data-field="status"></select>
+        </label>
+        <button class="btn" type="button" data-action="reset">Re-seed sample</button>
+      </section>
+
+      <section class="workspace">
+        <article class="card list-panel">
+          <div class="panel-head">
+            <div>
+              <strong>Signals</strong>
+              <p>Sorted by signal minus friction.</p>
+            </div>
+            <span class="chip" data-role="count"></span>
+          </div>
+          <div class="list" data-role="list"></div>
+        </article>
+        <article class="card editor-panel" data-role="editor"></article>
+      </section>
+    </div>
+    <script type="module" src="./js/main.js"></script>
+  </body>
+</html>
