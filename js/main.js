@@ -171,6 +171,9 @@ const refs = {
 const toastHost = (() => {
   const host = document.createElement('div');
   host.className = 'toast-host';
+  host.setAttribute('role', 'status');
+  host.setAttribute('aria-live', 'polite');
+  host.setAttribute('aria-atomic', 'true');
   document.body.appendChild(host);
   return host;
 })();
@@ -200,8 +203,9 @@ function todayISO(offset = 0) {
 
 function daysFromToday(value) {
   if (!value) return 999;
-  const today = new Date(`${todayISO()}T00:00:00`);
   const target = new Date(`${value}T00:00:00`);
+  if (Number.isNaN(target.getTime())) return 999;
+  const today = new Date(`${todayISO()}T00:00:00`);
   return Math.round((target - today) / 86400000);
 }
 
@@ -213,7 +217,9 @@ function bumpDate(value, days) {
 
 function formatDate(value) {
   if (!value) return 'No date';
-  return new Date(`${value}T00:00:00`).toLocaleDateString('en-GB', { day: '2-digit', month: 'short' });
+  const parsed = new Date(`${value}T00:00:00`);
+  if (Number.isNaN(parsed.getTime())) return 'No date';
+  return parsed.toLocaleDateString('en-GB', { day: '2-digit', month: 'short' });
 }
 
 function escapeHtml(value) {
@@ -373,10 +379,16 @@ function exportState() {
 async function importState(file) {
   const raw = await file.text();
   const parsed = JSON.parse(raw);
+  if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) {
+    throw new Error('backup is not a valid object');
+  }
+  if (!Array.isArray(parsed.items)) {
+    throw new Error('backup is missing an items list');
+  }
   commit({
     ...seedState(),
     ...parsed,
-    items: (parsed.items || []).map((item) => normalize(item)),
+    items: parsed.items.map((item) => normalize(item)),
     ui: { ...seedState().ui, ...(parsed.ui || {}) },
   });
   showToast('Imported backup.');
@@ -686,7 +698,7 @@ document.addEventListener('change', async (event) => {
       await importState(file);
     } catch (error) {
       console.error(error);
-      showToast('Import failed.');
+      showToast(error?.message ? `Import failed: ${error.message}.` : 'Import failed.');
     } finally {
       event.target.value = '';
     }
