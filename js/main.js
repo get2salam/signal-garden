@@ -407,7 +407,12 @@ function runAction(action) {
   const target = selectedItem();
   if (!target) return;
   if (action.mode === 'copy') {
-    copyValue(target[action.key] || '', action.label.toLowerCase());
+    const value = target[action.key] || '';
+    if (!value.trim()) {
+      showToast(`Nothing to copy for ${action.label.toLowerCase()}.`);
+      return;
+    }
+    copyValue(value, action.label.toLowerCase());
     return;
   }
 
@@ -706,6 +711,13 @@ document.addEventListener('change', async (event) => {
 });
 
 document.addEventListener('keydown', (event) => {
+  if (event.key === 'Escape') {
+    if (event.target === refs.search) refs.search.blur();
+    if (state.ui.search) {
+      commit({ ...state, ui: { ...state.ui, search: '' } });
+    }
+    return;
+  }
   if (event.target.closest('input, textarea, select')) return;
   if (event.key.toLowerCase() === 'n') {
     event.preventDefault();
@@ -714,6 +726,7 @@ document.addEventListener('keydown', (event) => {
   if (event.key === '/') {
     event.preventDefault();
     refs.search.focus();
+    refs.search.select();
   }
 });
 

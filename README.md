@@ -34,7 +34,8 @@ Then open <http://localhost:8000>.
 ## Keyboard shortcuts
 
 - `N` creates a new signal
-- `/` focuses the search box
+- `/` focuses and selects the search box
+- `Esc` clears the active search filter
 
 ## Privacy
 
