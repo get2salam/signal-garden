@@ -644,7 +644,27 @@ function renderPanels() {
   `;
 }
 
+function captureEditorFocus() {
+  const active = document.activeElement;
+  const field = active?.dataset?.itemField;
+  if (!field || !refs.editor.contains(active)) return null;
+  const start = typeof active.selectionStart === 'number' ? active.selectionStart : null;
+  const end = typeof active.selectionEnd === 'number' ? active.selectionEnd : null;
+  return { field, start, end };
+}
+
+function restoreEditorFocus(snapshot) {
+  if (!snapshot) return;
+  const target = refs.editor.querySelector(`[data-item-field="${snapshot.field}"]`);
+  if (!target) return;
+  target.focus();
+  if (snapshot.start != null && typeof target.setSelectionRange === 'function') {
+    try { target.setSelectionRange(snapshot.start, snapshot.end); } catch { /* unsupported input type */ }
+  }
+}
+
 function render() {
+  const focusSnapshot = captureEditorFocus();
   refs.boardTitle.textContent = state.boardTitle;
   refs.boardSubtitle.textContent = state.boardSubtitle;
   refs.search.value = state.ui.search;
@@ -657,6 +677,7 @@ function render() {
   renderList(items);
   renderEditor(selectedItem());
   renderPanels();
+  restoreEditorFocus(focusSnapshot);
 }
 
 document.addEventListener('click', (event) => {
