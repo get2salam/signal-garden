@@ -41,6 +41,21 @@ Then open <http://localhost:8000>.
 
 Everything stays in your browser unless you export a JSON backup.
 
+## Verification
+
+Signal Garden ships with an offline board audit that runs without a browser. It
+re-parses the SPEC out of `js/main.js`, checks the invariants the UI silently
+depends on (states ⊇ completedStates, `stateWeights` covers every state,
+actions and seed items reference only declared categories/states, metric bounds
+are sane), and prints a deterministic priority ranking for the seed items.
+
+```bash
+node tools/audit-board.mjs        # one-shot audit + ranked seed board
+node --test tools/*.test.mjs      # full audit test suite
+```
+
+The same two commands run in CI via `.github/workflows/audit.yml`.
+
 ## License
 
 MIT
