@@ -152,6 +152,12 @@ const SPEC = {
   ]
 };
 const STORAGE_KEY = `${SPEC.slug}/state/v3`;
+const IMPORT_LIMITS = {
+  bytes: 256 * 1024,
+  items: 100,
+  text: 240,
+  search: 80,
+};
 const refs = {
   boardTitle: document.querySelector('[data-role="board-title"]'),
   boardSubtitle: document.querySelector('[data-role="board-subtitle"]'),
@@ -232,7 +238,25 @@ function escapeHtml(value) {
 }
 
 function clamp(value, min, max) {
-  return Math.max(min, Math.min(max, Number(value)));
+  const number = Number(value);
+  if (!Number.isFinite(number)) return min;
+  return Math.max(min, Math.min(max, number));
+}
+
+function isPlainObject(value) {
+  return value && typeof value === 'object' && !Array.isArray(value);
+}
+
+function cleanText(value, fallback, max = IMPORT_LIMITS.text) {
+  if (typeof value !== 'string') return fallback;
+  const trimmed = value.replace(/[\u0000-\u001f\u007f]/g, ' ').replace(/\s+/g, ' ').trim();
+  return trimmed ? trimmed.slice(0, max) : fallback;
+}
+
+function cleanDate(value, fallback = todayISO(3)) {
+  if (typeof value !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(value)) return fallback;
+  const parsed = new Date(`${value}T00:00:00`);
+  return Number.isNaN(parsed.getTime()) ? fallback : value;
 }
 
 function completedStates() {
@@ -253,17 +277,39 @@ function toneForDate(item) {
 
 function normalize(item = {}) {
   return {
-    id: item.id || uid(),
-    title: item.title || `New ${SPEC.itemLabel}`,
-    note: item.note || SPEC.defaults.note,
+    id: cleanText(item.id, uid(), 80),
+    title: cleanText(item.title, `New ${SPEC.itemLabel}`),
+    note: cleanText(item.note, SPEC.defaults.note, 600),
     category: SPEC.categories.includes(item.category) ? item.category : SPEC.categories[0],
     state: SPEC.states.includes(item.state) ? item.state : SPEC.states[0],
     score: clamp(item.score ?? 7, 1, 10),
     effort: clamp(item.effort ?? 3, 1, 10),
     metric: clamp(item.metric ?? SPEC.metric.default ?? 6, SPEC.metric.min, SPEC.metric.max),
-    textOne: item.textOne || SPEC.textOne.default,
-    textTwo: item.textTwo || SPEC.textTwo.default,
-    date: item.date || todayISO(3),
+    textOne: cleanText(item.textOne, SPEC.textOne.default),
+    textTwo: cleanText(item.textTwo, SPEC.textTwo.default),
+    date: cleanDate(item.date),
+  };
+}
+
+function sanitizeStateInput(input) {
+  const seed = seedState();
+  if (!isPlainObject(input)) return seed;
+  if (!Array.isArray(input.items)) throw new Error('backup is missing an items list');
+  if (input.items.length > IMPORT_LIMITS.items) throw new Error(`backup has too many items (max ${IMPORT_LIMITS.items})`);
+  if (!input.items.every(isPlainObject)) throw new Error('backup items must be objects');
+  const ui = isPlainObject(input.ui) ? input.ui : {};
+  return {
+    ...seed,
+    boardTitle: cleanText(input.boardTitle, seed.boardTitle, 120),
+    boardSubtitle: cleanText(input.boardSubtitle, seed.boardSubtitle, 180),
+    items: input.items.map((item) => normalize(item)),
+    ui: {
+      ...seed.ui,
+      search: cleanText(ui.search, '', IMPORT_LIMITS.search),
+      category: SPEC.categories.includes(ui.category) ? ui.category : 'all',
+      status: SPEC.states.includes(ui.status) ? ui.status : 'all',
+      selectedId: typeof ui.selectedId === 'string' ? cleanText(ui.selectedId, '', 80) : null,
+    },
   };
 }
 
@@ -287,12 +333,7 @@ function hydrate() {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (!raw) return seedState();
     const parsed = JSON.parse(raw);
-    return {
-      ...seedState(),
-      ...parsed,
-      items: (parsed.items || []).map((item) => normalize(item)),
-      ui: { ...seedState().ui, ...(parsed.ui || {}) },
-    };
+    return sanitizeStateInput(parsed);
   } catch (error) {
     console.warn('Falling back to seed state', error);
     return seedState();
@@ -377,20 +418,18 @@ function exportState() {
 }
 
 async function importState(file) {
+  if (file.size > IMPORT_LIMITS.bytes) {
+    throw new Error(`backup is too large (max ${Math.round(IMPORT_LIMITS.bytes / 1024)}KB)`);
+  }
   const raw = await file.text();
+  if (raw.length > IMPORT_LIMITS.bytes) {
+    throw new Error(`backup is too large (max ${Math.round(IMPORT_LIMITS.bytes / 1024)}KB)`);
+  }
   const parsed = JSON.parse(raw);
-  if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) {
+  if (!isPlainObject(parsed)) {
     throw new Error('backup is not a valid object');
   }
-  if (!Array.isArray(parsed.items)) {
-    throw new Error('backup is missing an items list');
-  }
-  commit({
-    ...seedState(),
-    ...parsed,
-    items: parsed.items.map((item) => normalize(item)),
-    ui: { ...seedState().ui, ...(parsed.ui || {}) },
-  });
+  commit(sanitizeStateInput(parsed));
   showToast('Imported backup.');
 }
 
