@@ -93,3 +93,29 @@ test('importState normalizes untrusted fields before persistence', async () => {
   assert.equal(stored.ui.category, 'all');
   assert.equal(stored.ui.status, 'all');
 });
+
+test('editor updates reject forged category, state, and date values', async () => {
+  const { context, saved } = await bootApp();
+
+  context.updateSelected('category', 'Ghost');
+  context.updateSelected('state', 'Phantom');
+  context.updateSelected('date', 'not-a-date');
+
+  const stored = JSON.parse([...saved.values()].at(-1));
+  assert.equal(stored.items[0].category, 'Lead');
+  assert.equal(stored.items[0].state, 'Testing');
+  assert.equal(stored.items[0].date, '2026-04-25');
+});
+
+test('editor updates still accept valid controlled values', async () => {
+  const { context, saved } = await bootApp();
+
+  context.updateSelected('category', 'Experiment');
+  context.updateSelected('state', 'Nurturing');
+  context.updateSelected('date', '2026-05-01');
+
+  const stored = JSON.parse([...saved.values()].at(-1));
+  assert.equal(stored.items[0].category, 'Experiment');
+  assert.equal(stored.items[0].state, 'Nurturing');
+  assert.equal(stored.items[0].date, '2026-05-01');
+});

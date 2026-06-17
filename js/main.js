@@ -378,6 +378,12 @@ function updateSelected(field, value) {
       if (['score', 'effort', 'metric'].includes(field)) {
         const bounds = field === 'metric' ? SPEC.metric : { min: 1, max: 10 };
         next[field] = clamp(value, bounds.min, bounds.max);
+      } else if (field === 'category') {
+        next.category = SPEC.categories.includes(value) ? value : item.category;
+      } else if (field === 'state') {
+        next.state = SPEC.states.includes(value) ? value : item.state;
+      } else if (field === 'date') {
+        next.date = cleanDate(value, item.date);
       }
       return next;
     }),
