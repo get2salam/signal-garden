@@ -79,6 +79,8 @@ const SPEC = {
   },
   "emptyTitle": "No signals yet",
   "emptyBody": "Capture the ideas, leads, and patterns that deserve another look.",
+  "emptyFilteredTitle": "No matching signals",
+  "emptyFilteredBody": "Try clearing search or switching the signal type/status filters.",
   "actions": [
     {
       "id": "schedule-test",
@@ -356,6 +358,10 @@ function filteredItems() {
     .sort((a, b) => priority(b) - priority(a) || daysFromToday(a.date) - daysFromToday(b.date));
 }
 
+function hasActiveFilter() {
+  return Boolean(state.ui.search.trim()) || state.ui.category !== 'all' || state.ui.status !== 'all';
+}
+
 function selectedItem() {
   return state.items.find((item) => item.id === state.ui.selectedId) || filteredItems()[0] || null;
 }
@@ -533,17 +539,18 @@ function renderInsights(items) {
 
 function renderList(items) {
   if (!items.length) {
+    const filteredEmpty = state.items.length > 0 && hasActiveFilter();
     refs.list.innerHTML = `
-      <div class="empty">
-        <strong>${SPEC.emptyTitle}</strong>
-        <p>${SPEC.emptyBody}</p>
+      <div class="empty" role="status" aria-live="polite">
+        <strong>${filteredEmpty ? SPEC.emptyFilteredTitle : SPEC.emptyTitle}</strong>
+        <p>${filteredEmpty ? SPEC.emptyFilteredBody : SPEC.emptyBody}</p>
       </div>
     `;
     return;
   }
 
   refs.list.innerHTML = items.map((item) => `
-    <button class="item ${item.id === state.ui.selectedId ? 'is-selected' : ''}" type="button" data-id="${escapeHtml(item.id)}">
+    <button class="item ${item.id === state.ui.selectedId ? 'is-selected' : ''}" type="button" data-id="${escapeHtml(item.id)}" role="option" aria-selected="${item.id === state.ui.selectedId ? 'true' : 'false'}" aria-label="${escapeHtml(`${item.title}, ${item.category}, ${item.state}, priority ${priority(item)}`)}">
       <div class="item-top">
         <strong>${escapeHtml(item.title)}</strong>
         <span class="score">${priority(item)}</span>
@@ -717,6 +724,7 @@ function render() {
   refs.status.innerHTML = `<option value="all">All ${SPEC.labels.state.toLowerCase()}</option>${SPEC.states.map((entry) => `<option value="${entry}" ${state.ui.status === entry ? 'selected' : ''}>${entry}</option>`).join('')}`;
   const items = filteredItems();
   if (!items.some((item) => item.id === state.ui.selectedId)) state.ui.selectedId = items[0]?.id || null;
+  refs.list.setAttribute('aria-label', `${items.length} ${items.length === 1 ? SPEC.itemLabel : SPEC.itemPluralLabel.toLowerCase()} visible`);
   renderStats(items);
   renderInsights(items);
   renderList(items);

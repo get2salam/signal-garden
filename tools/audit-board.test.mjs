@@ -1,5 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
+import { readFile } from 'node:fs/promises';
 import { loadSpec, validateSpec, rankItems } from './audit-board.mjs';
 
 function baseSpec(overrides = {}) {
@@ -77,4 +78,17 @@ test('rankItems orders items by computed priority (deterministic)', () => {
   const ranked = rankItems(spec);
   assert.equal(ranked[0].title, 'Low effort, strong signal');
   assert.ok(ranked[0].priority > ranked[1].priority);
+});
+
+test('board markup exposes accessible result states and selected options', async () => {
+  const [html, source] = await Promise.all([
+    readFile(new URL('../index.html', import.meta.url), 'utf8'),
+    readFile(new URL('../js/main.js', import.meta.url), 'utf8'),
+  ]);
+
+  assert.match(html, /data-role="list" role="listbox" aria-label="Signal results"/);
+  assert.match(html, /data-role="count" aria-live="polite"/);
+  assert.match(source, /role="option" aria-selected="\$\{item\.id === state\.ui\.selectedId \? 'true' : 'false'\}"/);
+  assert.match(source, /role="status" aria-live="polite"/);
+  assert.match(source, /No matching signals/);
 });

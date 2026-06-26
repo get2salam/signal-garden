@@ -259,6 +259,11 @@ textarea {
   cursor: pointer;
 }
 
+.item:focus-visible {
+  outline: 3px solid color-mix(in srgb, var(--primary) 70%, #ffffff 10%);
+  outline-offset: 3px;
+}
+
 .item.is-selected {
   border-color: var(--primary);
   box-shadow: 0 0 0 3px color-mix(in srgb, var(--primary) 22%, transparent);
