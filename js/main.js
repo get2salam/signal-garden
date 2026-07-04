@@ -293,6 +293,19 @@ function normalize(item = {}) {
   };
 }
 
+function dedupeIds(items) {
+  const seen = new Set();
+  return items.map((item) => {
+    if (!seen.has(item.id)) {
+      seen.add(item.id);
+      return item;
+    }
+    const id = uid();
+    seen.add(id);
+    return { ...item, id };
+  });
+}
+
 function sanitizeStateInput(input) {
   const seed = seedState();
   if (!isPlainObject(input)) return seed;
@@ -304,7 +317,7 @@ function sanitizeStateInput(input) {
     ...seed,
     boardTitle: cleanText(input.boardTitle, seed.boardTitle, 120),
     boardSubtitle: cleanText(input.boardSubtitle, seed.boardSubtitle, 180),
-    items: input.items.map((item) => normalize(item)),
+    items: dedupeIds(input.items.map((item) => normalize(item))),
     ui: {
       ...seed.ui,
       search: cleanText(ui.search, '', IMPORT_LIMITS.search),

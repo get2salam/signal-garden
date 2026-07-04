@@ -107,6 +107,28 @@ test('editor updates reject forged category, state, and date values', async () =
   assert.equal(stored.items[0].date, '2026-04-25');
 });
 
+test('importState deduplicates ids so remove/edit only ever targets one signal', async () => {
+  const { context, saved } = await bootApp();
+  await context.importState({
+    size: 512,
+    text: async () => JSON.stringify({
+      items: [
+        { id: 'dup', title: 'First', category: 'Lead', state: 'Spotted', score: 5, effort: 3, metric: 5, date: '2026-05-01' },
+        { id: 'dup', title: 'Second', category: 'Idea', state: 'Testing', score: 6, effort: 4, metric: 6, date: '2026-05-02' },
+      ],
+    }),
+  });
+
+  const afterImport = JSON.parse([...saved.values()].at(-1));
+  assert.equal(afterImport.items.length, 2);
+  assert.notEqual(afterImport.items[0].id, afterImport.items[1].id, 'imported items sharing an id must be reassigned distinct ids');
+
+  context.removeSelected();
+  const afterRemove = JSON.parse([...saved.values()].at(-1));
+  assert.equal(afterRemove.items.length, 1, 'removing one signal must not delete every signal that shared its original id');
+  assert.equal(afterRemove.items[0].title, 'Second');
+});
+
 test('editor updates still accept valid controlled values', async () => {
   const { context, saved } = await bootApp();
 
