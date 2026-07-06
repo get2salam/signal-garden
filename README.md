@@ -56,6 +56,34 @@ node --test tools/*.test.mjs      # full audit test suite
 
 The same two commands run in CI via `.github/workflows/audit.yml`.
 
+## Customizing your board
+
+The `SPEC` object in `js/main.js` drives every label, category, and state on
+the board. The most common customization — adding a new state, say
+`Archived` for shelved signals — has one sharp edge: if you add the state
+without also adding a `stateWeights` entry (and a `completedStates` entry, if
+it should count as done), nothing throws. The board just renders fine and
+silently scores that state as 0 priority forever.
+
+`tools/customize-board.example.mjs` walks through exactly this mistake and
+the fix, using the same `validateSpec` the audit runs:
+
+```bash
+node tools/customize-board.example.mjs
+```
+
+```
+Adding an "Archived" state without wiring it up...
+  caught: stateWeights is missing an entry for state "Archived"
+
+Wiring up stateWeights + completedStates for "Archived"...
+  OK — customization is safe to ship.
+```
+
+A guard test (`tools/customize-board.example.test.mjs`, covered by the
+`node --test tools/*.test.mjs` command above) pins this behavior so it stays
+true as the audit evolves.
+
 ## License
 
 MIT
